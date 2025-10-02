@@ -107,9 +107,6 @@ async def on_message(message):
     
     if 'hola' in message.content.lower():
         await message.channel.send(f'¡Hola {message.author.name}!')
-
-    if 'ola' in message.content.lower():
-        await message.channel.send(f'¡Hola {message.author.name}!')
         
     if 'gola' in message.content.lower():
         await message.channel.send(f'¡Hola {message.author.name}!')
@@ -121,9 +118,6 @@ async def on_message(message):
         await message.channel.send(f'¡Hola {message.author.name}!')
     
     if 'hi' in message.content.lower():
-        await message.channel.send(f'¡Hola {message.author.name}!')
-
-    if 'Hi!' in message.content.lower():
         await message.channel.send(f'¡Hola {message.author.name}!')
 
     if 'Oa' in message.content.lower():
@@ -144,3 +138,4 @@ async def on_message(message):
     await bot.process_commands(message)
 
 bot.run(token)
+
