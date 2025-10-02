@@ -105,37 +105,29 @@ async def on_message(message):
     if message.author == bot.user:
         return
     
-    if 'hola' in message.content.lower():
-        await message.channel.send(f'¡Hola {message.author.name}!')
-        
-    if 'gola' in message.content.lower():
-        await message.channel.send(f'¡Hola {message.author.name}!')
-    
-    if 'Ola' in message.content.lower():
-        await message.channel.send(f'¡Hola {message.author.name}!')
-    
-    if 'Hi' in message.content.lower():
-        await message.channel.send(f'¡Hola {message.author.name}!')
-    
-    if 'hi' in message.content.lower():
+    contenido = message.content.lower()
+
+    # Lista de saludos que quieres reconocer
+    saludos = ["hola", "gola", "ola", "hi", "oa"]
+    if any(saludo in contenido for saludo in saludos):
         await message.channel.send(f'¡Hola {message.author.name}!')
 
-    if 'Oa' in message.content.lower():
-        await message.channel.send(f'¡Hola {message.author.name}!')
-
-    if '¿Como estás?' in message.content.lower():
-        await message.channel.send(f'Bien, y tu?')
-
-    if 'como tas?' in message.content.lower():
-        await message.channel.send(f'Bien, y tu?')
+    # Lista de preguntas tipo "¿cómo estás?"
+    estados = ["¿como estás?", "como tas?", "como andas", "que tal"]
+    if any(estado in contenido for estado in estados):
+        await message.channel.send("Bien, ¿y tú?")
     
-    if 'como andas' in message.content.lower():
-        await message.channel.send(f'Bien, y tu?')
-    
-    if 'Que tal' in message.content.lower():
-        await message.channel.send(f'Bien, y tu?')
-    
+    # Procesar comandos después de tus respuestas personalizadas
     await bot.process_commands(message)
 
+@bot.event
+async def on_ready():
+    print(f'Bot {bot.user} está en línea ✅')
+    # Estado personalizado
+    await bot.change_presence(
+        activity=discord.Game(name="con SunTime 😎")  # Jugando
+    )
+
 bot.run(token)
+
 
