@@ -1,3 +1,4 @@
+
 import discord
 from discord.ext import commands
 import requests
@@ -107,8 +108,39 @@ async def on_message(message):
     if 'hola' in message.content.lower():
         await message.channel.send(f'¡Hola {message.author.name}!')
 
+    if 'ola' in message.content.lower():
+        await message.channel.send(f'¡Hola {message.author.name}!')
+        
+    if 'gola' in message.content.lower():
+        await message.channel.send(f'¡Hola {message.author.name}!')
+    
+    if 'Ola' in message.content.lower():
+        await message.channel.send(f'¡Hola {message.author.name}!')
+    
+    if 'Hi' in message.content.lower():
+        await message.channel.send(f'¡Hola {message.author.name}!')
+    
+    if 'hi' in message.content.lower():
+        await message.channel.send(f'¡Hola {message.author.name}!')
+
+    if 'Hi!' in message.content.lower():
+        await message.channel.send(f'¡Hola {message.author.name}!')
+
+    if 'Oa' in message.content.lower():
+        await message.channel.send(f'¡Hola {message.author.name}!')
+
+    if '¿Como estás?' in message.content.lower():
+        await message.channel.send(f'Bien, y tu?')
+
+    if 'como tas?' in message.content.lower():
+        await message.channel.send(f'Bien, y tu?')
+    
+    if 'como andas' in message.content.lower():
+        await message.channel.send(f'Bien, y tu?')
+    
+    if 'Que tal' in message.content.lower():
+        await message.channel.send(f'Bien, y tu?')
+    
     await bot.process_commands(message)
-
-
 
 bot.run(token)
