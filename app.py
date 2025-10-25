@@ -4,19 +4,18 @@ import requests
 from dotenv import load_dotenv
 import os
 import wikipedia
+import random
 from datetime import datetime
 
-# --- Cargar variables desde .env ---
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 FOOTBALL_API_KEY = os.getenv("FOOTBALL_API_KEY")
 
-# --- Configuración de intents ---
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# --- Función para obtener partidos de Premier League ---
+
 def obtener_partidos_futbol():
     url = "https://api.football-data.org/v4/competitions/PL/matches?status=SCHEDULED"
     headers = {"X-Auth-Token": FOOTBALL_API_KEY}
@@ -28,7 +27,7 @@ def obtener_partidos_futbol():
         response = requests.get(url, headers=headers)
         if response.status_code == 403:
             return ["Acceso prohibido (403). Verifica tu API KEY o suscripción en football-data.org."]
-        
+
         response.raise_for_status()
         data = response.json()
 
@@ -43,8 +42,6 @@ def obtener_partidos_futbol():
     except requests.exceptions.RequestException as e:
         return [f"Error al obtener los partidos: {e}"]
 
-
-# --- Función para buscar en Wikipedia ---
 def buscar_wikipedia(consulta):
     try:
         wikipedia.set_lang("es")
@@ -55,43 +52,12 @@ def buscar_wikipedia(consulta):
     except wikipedia.exceptions.PageError:
         return f"No se encontró ningún artículo relacionado con '{consulta}' en Wikipedia."
 
-# --- Eventos ---
+
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=discord.Game(name="Respondiendo a tus comandos ⚡"))
-    print(f"✅ Bot conectado como {bot.user}")
+    print(f'Bot {bot.user} está en línea')
+    await bot.change_presence(activity=discord.Game(name="con SunTime 😎"))
 
-# --- Comandos ---
-@bot.command()
-async def info(ctx):
-    await ctx.send('¡Soy un bot creado por mi dueño SunTime!')
-
-@bot.command()
-async def crypto(ctx, coin: str):
-    try:
-        response = requests.get(f'https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd')
-        data = response.json()
-        if coin in data:
-            price = data[coin]['usd']
-            await ctx.send(f'El precio de {coin} es ${price} USD')
-        else:
-            await ctx.send('No se encontró la criptomoneda especificada.')
-    except Exception as e:
-        await ctx.send('Hubo un error al consultar el precio de la criptomoneda')
-        print(e)
-
-@bot.command()
-async def wiki(ctx, *, consulta):
-    resultado = buscar_wikipedia(consulta)
-    await ctx.send(resultado)
-
-@bot.command()
-async def partidos(ctx):
-    partidos = obtener_partidos_futbol()
-    for partido in partidos:
-        await ctx.send(partido)
-
-# --- Respuestas automáticas ---
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -114,14 +80,118 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-@bot.event
-async def on_ready():
-    print(f'Bot {bot.user} está en línea ✅')
-    # Estado personalizado
-    await bot.change_presence(
-        activity=discord.Game(name="con SunTime 😎")  # Jugando
-    )
 
-# --- Ejecutar bot ---
+@bot.command()
+async def info(ctx):
+    await ctx.send('¡Soy un bot creado por mi dueño SunTime!')
+
+@bot.command()
+async def crypto(ctx, coin: str):
+    try:
+        response = requests.get(f'https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd')
+        data = response.json()
+        if coin in data:
+            price = data[coin]['usd']
+            await ctx.send(f'El precio de **{coin}** es **${price} USD**')
+        else:
+            await ctx.send('No se encontró la criptomoneda especificada.')
+    except Exception as e:
+        await ctx.send('Hubo un error al consultar el precio.')
+        print(e)
+
+@bot.command()
+async def wiki(ctx, *, consulta):
+    resultado = buscar_wikipedia(consulta)
+    await ctx.send(resultado)
+
+@bot.command()
+async def partidos(ctx):
+    partidos = obtener_partidos_futbol()
+    for partido in partidos:
+        await ctx.send(partido)
+
+
+@bot.command()
+async def receta(ctx, *, nombre):
+    """Busca una receta por nombre."""
+    try:
+        url = f"https://www.themealdb.com/api/json/v1/1/search.php?s={nombre}"
+        res = requests.get(url)
+        data = res.json()
+        meals = data.get("meals")
+
+        if not meals:
+            await ctx.send(f'No se encontró ninguna receta llamada **{nombre}**.')
+            return
+
+        meal = meals[0]
+        titulo = meal["strMeal"]
+        categoria = meal["strCategory"]
+        area = meal["strArea"]
+        instrucciones = meal["strInstructions"][:500] + "..."
+        imagen = meal["strMealThumb"]
+
+        await ctx.send(f"**{titulo}** ({categoria}, {area})\n\n {instrucciones}\n\n {imagen}")
+    except Exception as e:
+        await ctx.send("Ocurrió un error al buscar la receta.")
+        print(e)
+
+@bot.command()
+async def receta_random(ctx):
+    """Devuelve una receta aleatoria."""
+    try:
+        url = "https://www.themealdb.com/api/json/v1/1/random.php"
+        res = requests.get(url)
+        data = res.json()
+        meal = data["meals"][0]
+        titulo = meal["strMeal"]
+        categoria = meal["strCategory"]
+        area = meal["strArea"]
+        instrucciones = meal["strInstructions"][:400] + "..."
+        imagen = meal["strMealThumb"]
+
+        await ctx.send(f"**{titulo}** ({categoria}, {area})\n\n {instrucciones}\n\n {imagen}")
+    except Exception as e:
+        await ctx.send("Error al obtener una receta aleatoria.")
+        print(e)
+
+
+@bot.command()
+async def dados(ctx):
+    numero = random.randint(1, 6)
+    await ctx.send(f'🎲 Has sacado un **{numero}**!')
+
+@bot.command()
+async def coin(ctx):
+    resultado = random.choice(["Cara", "Cruz"])
+    await ctx.send(f' Ha salido **{resultado}**!')
+
+@bot.command()
+async def pregunta(ctx, *, texto):
+    respuestas = [
+        "Sí.", "No.", "Tal vez.", "Claro que sí.", "Definitivamente no.",
+        "Pregúntame más tarde.", "No estoy seguro", "Probablemente sí."
+    ]
+    await ctx.send(f' {random.choice(respuestas)}')
+
+@bot.command()
+async def adivina(ctx):
+    numero = random.randint(1, 10)
+    await ctx.send(" Estoy pensando en un número del 1 al 10. ¡Adivina!")
+
+    def check(m):
+        return m.author == ctx.author and m.channel == ctx.channel
+
+    try:
+        msg = await bot.wait_for("message", check=check, timeout=10)
+        if msg.content.isdigit() and int(msg.content) == numero:
+            await ctx.send(" ¡Correcto! Adivinaste el número.")
+        else:
+            await ctx.send(f" No era ese. El número era **{numero}**.")
+    except:
+        await ctx.send(f" Tardaste demasiado. El número era **{numero}**.")
+
+
 bot.run(DISCORD_TOKEN)
+
 
