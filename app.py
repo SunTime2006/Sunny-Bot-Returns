@@ -66,6 +66,7 @@ async def on_message(message):
     saludos = ["hola", "gola", "ola", "hi", "oa"]
     preguntas = ["¿como estás?", "como tas?", "como andas", "que tal"]
     respuestas = ["ando bien", "chill", "fino", "piola"]
+    elogios = ["que educado"]
 
     content = message.content.lower()
 
@@ -77,6 +78,9 @@ async def on_message(message):
 
     if any(respuesta in content for respuesta in respuestas):
         await message.channel.send(f'Me alegra saberlo')
+
+    if any(elogio in content for elogio in elogios):
+        await message.channel.send(f'Siempre lo soy')
 
     await bot.process_commands(message)
 
