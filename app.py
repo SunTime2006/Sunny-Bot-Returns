@@ -92,15 +92,25 @@ async def info(ctx):
 @bot.command()
 async def crypto(ctx, coin: str):
     try:
+        coin = coin.lower()
         response = requests.get(f'https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd')
         data = response.json()
+
         if coin in data:
             price = data[coin]['usd']
-            await ctx.send(f'El precio de **{coin}** es **${price} USD**')
+            await ctx.send(f'El precio de **{coin.upper()}** es **${price} USD**')
+            return
+
+        response_fx = requests.get(f'https://api.exchangerate.host/latest?base={coin.upper()}&symbols=USD')
+        data_fx = response_fx.json()
+
+        if 'rates' in data_fx and 'USD' in data_fx['rates']:
+            rate = data_fx['rates']['USD']
+            await ctx.send(f'1 {coin.upper()} = {rate:.4f} USD')
         else:
-            await ctx.send('No se encontró la criptomoneda especificada.')
+            await ctx.send('No se encontró la moneda o criptomoneda especificada.')
     except Exception as e:
-        await ctx.send('Hubo un error al consultar el precio.')
+        await ctx.send('Hubo un error al consultar el valor.')
         print(e)
 
 @bot.command()
@@ -117,7 +127,6 @@ async def partidos(ctx):
 
 @bot.command()
 async def receta(ctx, *, nombre: str):
-    """Busca una receta peruana específica en Yanuq."""
     try:
         from bs4 import BeautifulSoup
         url = "https://www.yanuq.com/recetasperuanasp.asp"
@@ -145,7 +154,6 @@ async def receta(ctx, *, nombre: str):
 
 @bot.command()
 async def recetaaleatoria(ctx):
-    """Devuelve una receta aleatoria."""
     try:
         url = "https://www.themealdb.com/api/json/v1/1/random.php"
         res = requests.get(url)
@@ -199,6 +207,5 @@ async def adivina(ctx):
         await ctx.send(f" Tardaste demasiado. El número era **{numero}**.") 
 
 bot.run(DISCORD_TOKEN)
-
 
 
