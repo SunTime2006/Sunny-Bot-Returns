@@ -13,7 +13,7 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 FOOTBALL_API_KEY = os.getenv("FOOTBALL_API_KEY")
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='?', intents=intents)
 
 
 def obtener_partidos_futbol():
@@ -116,32 +116,35 @@ async def partidos(ctx):
 
 
 @bot.command()
-async def receta(ctx, *, nombre):
-    """Busca una receta por nombre."""
+async def receta(ctx, *, nombre: str):
+    """Busca una receta peruana específica en Yanuq."""
     try:
-        url = f"https://www.themealdb.com/api/json/v1/1/search.php?s={nombre}"
-        res = requests.get(url)
-        data = res.json()
-        meals = data.get("meals")
+        from bs4 import BeautifulSoup
+        url = "https://www.yanuq.com/recetasperuanasp.asp"
+        res = requests.get(url, timeout=10)
+        res.raise_for_status()
+        soup = BeautifulSoup(res.text, "html.parser")
 
-        if not meals:
-            await ctx.send(f'No se encontró ninguna receta llamada **{nombre}**.')
-            return
+        nombre_lower = nombre.lower()
+        resultados = []
 
-        meal = meals[0]
-        titulo = meal["strMeal"]
-        categoria = meal["strCategory"]
-        area = meal["strArea"]
-        instrucciones = meal["strInstructions"][:500] + "..."
-        imagen = meal["strMealThumb"]
+        for a in soup.find_all("a", href=True):
+            texto = a.get_text(strip=True)
+            if nombre_lower in texto.lower():
+                href = a['href']
+                link = href if href.startswith("http") else f"https://www.yanuq.com/{href.lstrip('/')}"
+                resultados.append(f" **{texto}** — {link}")
 
-        await ctx.send(f"**{titulo}** ({categoria}, {area})\n\n {instrucciones}\n\n {imagen}")
+        if resultados:
+            await ctx.send("\n".join(resultados[:5]))
+        else:
+            await ctx.send(f"No encontré recetas que contengan **{nombre}** en Yanuq.com")
     except Exception as e:
-        await ctx.send("Ocurrió un error al buscar la receta.")
+        await ctx.send("Ocurrió un error al buscar la receta en Yanuq.")
         print(e)
 
 @bot.command()
-async def receta_random(ctx):
+async def recetaaleatoria(ctx):
     """Devuelve una receta aleatoria."""
     try:
         url = "https://www.themealdb.com/api/json/v1/1/random.php"
@@ -163,7 +166,7 @@ async def receta_random(ctx):
 @bot.command()
 async def dados(ctx):
     numero = random.randint(1, 6)
-    await ctx.send(f'🎲 Has sacado un **{numero}**!')
+    await ctx.send(f'Has sacado un **{numero}**!')
 
 @bot.command()
 async def coin(ctx):
@@ -193,9 +196,9 @@ async def adivina(ctx):
         else:
             await ctx.send(f" No era ese. El número era **{numero}**.")
     except:
-        await ctx.send(f" Tardaste demasiado. El número era **{numero}**.")
-
+        await ctx.send(f" Tardaste demasiado. El número era **{numero}**.") 
 
 bot.run(DISCORD_TOKEN)
+
 
 
