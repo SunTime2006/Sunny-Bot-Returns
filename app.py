@@ -6,6 +6,8 @@ import os
 import wikipedia
 import random
 from datetime import datetime
+import time
+import re
 
 load_dotenv()
 
@@ -15,6 +17,23 @@ FOOTBALL_API_KEY = os.getenv("FOOTBALL_API_KEY")
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='?', intents=intents)
 
+_recent_responses = {}
+DUPLICATE_WINDOW = 5.0
+
+def _normalize_text(s: str) -> str:
+    """Quita espacios extras, normaliza a minúsculas y reemplaza saltos de línea por espacios."""
+    if not s:
+        return ""
+    s = s.strip().lower()
+    s = re.sub(r'\s+', ' ', s)
+    return s
+
+def _prune_recent():
+    """Elimina entradas antiguas del diccionario para que no crezca indefinidamente."""
+    now = time.time()
+    stale_keys = [k for k, t in _recent_responses.items() if now - t > DUPLICATE_WINDOW * 2]
+    for k in stale_keys:
+        _recent_responses.pop(k, None)
 
 def obtener_partidos_futbol():
     url = "https://api.football-data.org/v4/competitions/PL/matches?status=SCHEDULED"
@@ -24,7 +43,7 @@ def obtener_partidos_futbol():
         return ["No tienes configurada la API KEY de Football-Data. Revisa tu archivo .env"]
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 403:
             return ["Acceso prohibido (403). Verifica tu API KEY o suscripción en football-data.org."]
 
@@ -32,7 +51,7 @@ def obtener_partidos_futbol():
         data = response.json()
 
         partidos = []
-        for match in data["matches"][:5]:
+        for match in data.get("matches", [])[:5]:
             local = match["homeTeam"]["name"]
             visitante = match["awayTeam"]["name"]
             fecha = match["utcDate"]
@@ -51,36 +70,64 @@ def buscar_wikipedia(consulta):
         return f"La búsqueda '{consulta}' es ambigua. Por favor sé más específico."
     except wikipedia.exceptions.PageError:
         return f"No se encontró ningún artículo relacionado con '{consulta}' en Wikipedia."
+    except Exception as e:
+        return f"Ocurrió un error al buscar en Wikipedia: {e}"
 
 
 @bot.event
 async def on_ready():
     print(f'Bot {bot.user} está en línea')
-    await bot.change_presence(activity=discord.Game(name="con SunTime 😎"))
+    await bot.change_presence(activity=discord.Game(name="Jugando con SunTime 😎"))
+
 
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:
+    if message.author == bot.user or message.webhook_id is not None:
         return
 
-    saludos = ["hola", "gola", "ola", "hi", "oa"]
-    preguntas = ["¿como estás?", "como tas?", "como andas", "que tal"]
-    respuestas = ["ando bien", "chill", "fino", "piola"]
-    elogios = ["que educado"]
+    content_raw = message.content or ""
+    if not content_raw.strip():
+        await bot.process_commands(message)
+        return
 
-    content = message.content.lower()
+    content = _normalize_text(content_raw)
 
-    if any(saludo in content for saludo in saludos):
+    _prune_recent()
+
+    key = (message.channel.id, message.author.id, content)
+    now = time.time()
+
+    if key in _recent_responses and (now - _recent_responses[key]) <= DUPLICATE_WINDOW:
+        await bot.process_commands(message)
+        return
+
+    saludos = {"hola", "gola", "ola", "hi", "oa"}
+    preguntas = {"¿como estás?", "como tas?", "como andas", "que tal", "como estas"}
+    respuestas = {"ando bien", "chill", "fino", "piola"}
+    elogios = {"que educado"}
+
+    sent = False
+
+    words = set(re.findall(r"\b\w+\b", content))
+
+    if words & saludos:
         await message.channel.send(f'¡Hola {message.author.name}!')
+        sent = True
 
-    if any(pregunta in content for pregunta in preguntas):
+    elif any(preg in content for preg in preguntas):
         await message.channel.send("Bien, ¿y tú?")
+        sent = True
 
-    if any(respuesta in content for respuesta in respuestas):
-        await message.channel.send(f'Me alegra saberlo')
+    elif any(resp in content for resp in respuestas):
+        await message.channel.send("¡Me alegra saberlo!")
+        sent = True
 
-    if any(elogio in content for elogio in elogios):
-        await message.channel.send(f'Siempre lo soy')
+    elif any(el in content for el in elogios):
+        await message.channel.send("¡Siempre lo soy!")
+        sent = True
+
+    if sent:
+        _recent_responses[key] = now
 
     await bot.process_commands(message)
 
@@ -93,7 +140,7 @@ async def info(ctx):
 async def crypto(ctx, coin: str):
     try:
         coin = coin.lower()
-        response = requests.get(f'https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd')
+        response = requests.get(f'https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd', timeout=10)
         data = response.json()
 
         if coin in data:
@@ -101,7 +148,7 @@ async def crypto(ctx, coin: str):
             await ctx.send(f'El precio de **{coin.upper()}** es **${price} USD**')
             return
 
-        response_fx = requests.get(f'https://api.exchangerate.host/latest?base={coin.upper()}&symbols=USD')
+        response_fx = requests.get(f'https://api.exchangerate.host/latest?base={coin.upper()}&symbols=USD', timeout=10)
         data_fx = response_fx.json()
 
         if 'rates' in data_fx and 'USD' in data_fx['rates']:
@@ -123,7 +170,6 @@ async def partidos(ctx):
     partidos = obtener_partidos_futbol()
     for partido in partidos:
         await ctx.send(partido)
-
 
 @bot.command()
 async def receta(ctx, *, nombre: str):
@@ -156,7 +202,7 @@ async def receta(ctx, *, nombre: str):
 async def recetaaleatoria(ctx):
     try:
         url = "https://www.themealdb.com/api/json/v1/1/random.php"
-        res = requests.get(url)
+        res = requests.get(url, timeout=10)
         data = res.json()
         meal = data["meals"][0]
         titulo = meal["strMeal"]
@@ -169,7 +215,6 @@ async def recetaaleatoria(ctx):
     except Exception as e:
         await ctx.send("Error al obtener una receta aleatoria.")
         print(e)
-
 
 @bot.command()
 async def dados(ctx):
@@ -207,5 +252,4 @@ async def adivina(ctx):
         await ctx.send(f" Tardaste demasiado. El número era **{numero}**.") 
 
 bot.run(DISCORD_TOKEN)
-
 
