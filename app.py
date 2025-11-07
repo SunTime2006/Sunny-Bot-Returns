@@ -252,4 +252,3 @@ async def adivina(ctx):
         await ctx.send(f" Tardaste demasiado. El número era **{numero}**.") 
 
 bot.run(DISCORD_TOKEN)
-
