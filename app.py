@@ -137,6 +137,20 @@ async def info(ctx):
     await ctx.send('¡Soy un bot creado por mi dueño SunTime!')
 
 @bot.command()
+async def list(ctx):
+    await ctx.send('Lista de comandos: '
+    '?info: Información del bot'
+    '?crypto [moneda]: Tipo de cambio'
+    '?wiki [tema]: Buscar un tema en la Wikipedia'
+    '?partidos [fecha]: Buscar una fecha de un partido'
+    '?receta [plato]: Buscar una receta de un plato'
+    '?recetaaleatoria: Muestre una receta al azar'
+    '?dados: Juego de dados'
+    '?coin: Juego de cara o cruz'
+    '?pregunta [pregunta]: Juego de preguntas'
+    '?adivina: Adivinanza de un número')
+    
+@bot.command()
 async def crypto(ctx, coin: str):
     try:
         coin = coin.lower()
