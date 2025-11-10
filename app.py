@@ -140,16 +140,16 @@ async def info(ctx):
 async def list(ctx):
     await ctx.send('Lista de comandos: '
     '?info: Información del bot'
-    '?crypto [moneda]: Tipo de cambio'
-    '?wiki [tema]: Buscar un tema en la Wikipedia'
-    '?partidos [fecha]: Buscar una fecha de un partido'
-    '?receta [plato]: Buscar una receta de un plato'
+    '?crypto [tipo de moneda]: Tipo de cambio'
+    '?wiki [nombre de la búsqueda]: Buscar un tema en la Wikipedia'
+    '?partidos [fecha AÑO-MES-DIA]: Buscar una fecha de un partido'
+    '?receta [nombre del plato]: Buscar una receta de un plato'
     '?recetaaleatoria: Muestre una receta al azar'
     '?dados: Juego de dados'
     '?coin: Juego de cara o cruz'
     '?pregunta [pregunta]: Juego de preguntas'
     '?adivina: Adivinanza de un número')
-    
+
 @bot.command()
 async def crypto(ctx, coin: str):
     try:
