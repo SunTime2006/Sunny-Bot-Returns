@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import os
 import wikipedia
 import random
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import time
 import re
 
@@ -35,31 +35,70 @@ def _prune_recent():
     for k in stale_keys:
         _recent_responses.pop(k, None)
 
-def obtener_partidos_futbol():
-    url = "https://api.football-data.org/v4/competitions/PL/matches?status=SCHEDULED"
+def obtener_partidos_futbol(fecha_yyyy_mm_dd: str = None):
+    """
+    Obtiene partidos para la fecha indicada (formato YYYY-MM-DD) usando football-data.org.
+    Si fecha_yyyy_mm_dd es None, se retornan partidos programados para hoy (UTC).
+    Devuelve una lista de strings para enviar al canal.
+    """
+    url_base = "https://api.football-data.org/v4/competitions/PL/matches"
     headers = {"X-Auth-Token": FOOTBALL_API_KEY}
 
     if not FOOTBALL_API_KEY:
         return ["No tienes configurada la API KEY de Football-Data. Revisa tu archivo .env"]
 
+    params = {}
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code == 403:
-            return ["Acceso prohibido (403). Verifica tu API KEY o suscripción en football-data.org."]
+        if fecha_yyyy_mm_dd:
+            try:
+                datetime.strptime(fecha_yyyy_mm_dd, "%Y-%m-%d")
+            except ValueError:
+                return [f"Formato de fecha inválido: '{fecha_yyyy_mm_dd}'. Usa YYYY-MM-DD."]
+            params["dateFrom"] = fecha_yyyy_mm_dd
+            params["dateTo"] = fecha_yyyy_mm_dd
+        else:
+            hoy_utc = datetime.utcnow().date().isoformat()
+            params["dateFrom"] = hoy_utc
+            params["dateTo"] = hoy_utc
 
-        response.raise_for_status()
-        data = response.json()
+        try:
+            response = requests.get(url_base, headers=headers, params=params, timeout=10)
+            if response.status_code == 403:
+                return ["Acceso prohibido (403). Verifica tu API KEY o suscripción en football-data.org."]
+            response.raise_for_status()
+            data = response.json()
+        except requests.exceptions.RequestException as e:
+            return [f"Error al obtener los partidos: {e}"]
 
-        partidos = []
-        for match in data.get("matches", [])[:5]:
+        matches = data.get("matches", [])
+        if not matches:
+            return ["No hay partidos registrados para esa fecha."]
+
+        resultados = []
+        tz_lima = timezone(timedelta(hours=-5))
+
+        for match in matches:
             local = match["homeTeam"]["name"]
             visitante = match["awayTeam"]["name"]
-            fecha = match["utcDate"]
-            partidos.append(f"{local} vs {visitante} el {fecha}")
+            fecha_iso = match.get("utcDate") 
+            if fecha_iso:
+                try:
+                    dt_utc = datetime.fromisoformat(fecha_iso.replace("Z", "+00:00"))
+                    dt_lima = dt_utc.astimezone(tz_lima)
+                    fecha_str = dt_lima.strftime("%Y-%m-%d %H:%M (Lima)")
+                except Exception:
+                    fecha_str = fecha_iso
+            else:
+                fecha_str = "Fecha no disponible"
 
-        return partidos if partidos else ["No hay partidos próximos."]
-    except requests.exceptions.RequestException as e:
-        return [f"Error al obtener los partidos: {e}"]
+            compet = match.get("competition", {}).get("name", "")
+            estado = match.get("status", "")
+            resultados.append(f"{local} vs {visitante} — {fecha_str} — {compet} — {estado}")
+
+        return resultados
+
+    except Exception as e:
+        return [f"Ocurrió un error inesperado: {e}"]
 
 def buscar_wikipedia(consulta):
     try:
@@ -138,17 +177,19 @@ async def info(ctx):
 
 @bot.command()
 async def list(ctx):
-    await ctx.send('Lista de comandos: '
-    '?info: Información del bot'
-    '?crypto [tipo de moneda]: Tipo de cambio'
-    '?wiki [nombre de la búsqueda]: Buscar un tema en la Wikipedia'
-    '?partidos [fecha AÑO-MES-DIA]: Buscar una fecha de un partido'
-    '?receta [nombre del plato]: Buscar una receta de un plato'
-    '?recetaaleatoria: Muestre una receta al azar'
-    '?dados: Juego de dados'
-    '?coin: Juego de cara o cruz'
-    '?pregunta [pregunta]: Juego de preguntas'
-    '?adivina: Adivinanza de un número')
+    await ctx.send(
+        "Lista de comandos: "
+        " - ?info: Información del bot"
+        " - ?crypto [tipo de moneda]: Tipo de cambio"
+        " - ?wiki [nombre de la búsqueda]: Buscar un tema en la Wikipedia"
+        " - ?partidos [fecha AÑO-MES-DIA]: Buscar una fecha de un partido"
+        " - ?receta [nombre del plato]: Buscar una receta de un plato"
+        " - ?recetaaleatoria: Muestre una receta al azar"
+        " - ?dados: Juego de dados"
+        " - ?coin: Juego de cara o cruz"
+        " - ?pregunta [pregunta]: Juego de preguntas"
+        " - ?adivina: Adivinanza de un número"
+    )
 
 @bot.command()
 async def crypto(ctx, coin: str):
@@ -180,10 +221,22 @@ async def wiki(ctx, *, consulta):
     await ctx.send(resultado)
 
 @bot.command()
-async def partidos(ctx):
-    partidos = obtener_partidos_futbol()
-    for partido in partidos:
-        await ctx.send(partido)
+async def partidos(ctx, fecha: str = None):
+    """
+    Uso:
+      ?partidos              -> partidos para hoy (zona Lima)
+      ?partidos 2025-11-10   -> partidos para la fecha indicada (YYYY-MM-DD)
+    """
+    if fecha:
+        try:
+            datetime.strptime(fecha, "%Y-%m-%d")
+        except ValueError:
+            await ctx.send("Formato de fecha inválido. Usa: YYYY-MM-DD (por ejemplo: 2025-11-10).")
+            return
+
+    partidos_list = obtener_partidos_futbol(fecha)
+    for p in partidos_list:
+        await ctx.send(p)
 
 @bot.command()
 async def receta(ctx, *, nombre: str):
