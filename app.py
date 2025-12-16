@@ -216,6 +216,47 @@ async def crypto(ctx, coin: str):
         print(e)
 
 @bot.command()
+async def metacritic(ctx, *, juego: str):
+    import os
+    import requests
+
+    API_KEY = os.getenv("RAWG_API_KEY")
+    url = "https://api.rawg.io/api/games"
+
+    params = {
+        "search": juego,
+        "page_size": 1,
+        "key": API_KEY
+    }
+
+    try:
+        res = requests.get(url, params=params, timeout=10)
+        res.raise_for_status()
+        data = res.json()
+    except Exception as e:
+        await ctx.send("Error al consultar RAWG.")
+        print(e)
+        return
+
+    if not data["results"]:
+        await ctx.send(f"No encontré resultados para **{juego}**.")
+        return
+
+    game = data["results"][0]
+
+    titulo = game.get("name", juego)
+    metascore = game.get("metacritic", "N/A")
+    user_score = game.get("rating", "N/A")
+    link = f"https://rawg.io/games/{game.get('slug')}"
+
+    await ctx.send(
+        f"**{titulo}**\n"
+        f"Metascore (críticos): **{metascore}**\n"
+        f"User Score: **{user_score}**\n"
+        f"{link}"
+    )
+
+@bot.command()
 async def wiki(ctx, *, consulta):
     resultado = buscar_wikipedia(consulta)
     await ctx.send(resultado)
