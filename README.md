@@ -1,10 +1,14 @@
-# Sunny Bot ☀️
+### Sunny Bot ☀️
 
-¿Qué es?
+<p align="center">
+  <img width="300" src="https://i.ibb.co/Lj58JJp/Dise-o-sin-t-tulo.png">
+</p
+  
+## ¿Qué es?
 
 Es un bot con diversas funciones para tus servers donde la pasaras bien, fue creado en Python utilizando la librería de discord.py, sin nada más que decir les explicaré ciertos comandos que presenta 😊
 
-# Lista de comandos
+## Lista de comandos
 
 - Escribir un hola, gola, ola, hi, oa: El bot te saluda y dice tu nombre
 - Escribir un ¿como estas?, como tas?, como andas, que tal: El bot te responde Bien, ¿y tú?
